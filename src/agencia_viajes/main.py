@@ -1,16 +1,24 @@
-"""Menú de consola del Sprint 1: gestión de destinos.
-
-AVISO (deuda técnica): en este sprint el menú es accesible sin iniciar sesión.
-En el Sprint 2 se protege con autenticación y rol de administrador (RNF04, S6).
+"""Menú de consola: inicio de sesión, registro y paneles por rol (Sprint 2a).
 
 Ejecutar desde la raíz del proyecto:   python -m src.agencia_viajes.main
+Primero crea un administrador:         python -m src.agencia_viajes.crear_admin
+
+La "sesión" es simplemente la variable `usuario` que recibe cada menú mientras la
+persona está dentro; al volver al menú principal (cerrar sesión) se descarta.
 """
+from getpass import getpass
+
 from .database import crear_esquema, obtener_conexion
 from .errores import ErrorAgencia, ErrorValidacion
+from .models.administrador import Administrador
 from .repositories.repositorio_destinos import RepositorioDestinos
+from .repositories.repositorio_usuarios import RepositorioUsuarios
+from .seguridad import cargar_cifrador
+from .services.servicio_autenticacion import ServicioAutenticacion
 from .services.servicio_destinos import ELIMINADO, ServicioDestinos
 
 
+# ---------------------------------------------------------------- utilidades
 def formatear_pesos(valor: int) -> str:
     """120000 -> $120.000 (formato chileno)."""
     return "$" + f"{valor:,}".replace(",", ".")
@@ -38,6 +46,7 @@ def pedir_opcional_texto(mensaje: str):
     return texto if texto else None
 
 
+# ------------------------------------------------------------ panel de destinos
 def mostrar_destinos(destinos) -> None:
     if not destinos:
         print("No hay destinos registrados.")
@@ -50,21 +59,21 @@ def mostrar_destinos(destinos) -> None:
               f"{formatear_pesos(d.costo_base):<13}{estado}")
 
 
-def opcion_registrar(servicio: ServicioDestinos) -> None:
+def opcion_registrar(servicio: ServicioDestinos, admin) -> None:
     nombre = input("Nombre: ")
     zona = input("Zona: ")
     descripcion = input("Descripción (opcional): ")
     duracion = pedir_entero("Duración en días: ", "La duración")
     costo = pedir_entero("Costo base por persona (CLP): ", "El costo base")
-    destino = servicio.registrar(nombre, zona, duracion, costo, descripcion)
+    destino = servicio.registrar(admin, nombre, zona, duracion, costo, descripcion)
     print(f"Destino registrado con ID {destino.id}.")
 
 
-def opcion_modificar(servicio: ServicioDestinos) -> None:
+def opcion_modificar(servicio: ServicioDestinos, admin) -> None:
     id_destino = pedir_entero("ID del destino a modificar: ", "El ID")
     print("Deja vacío lo que no quieras cambiar.")
     servicio.modificar(
-        id_destino,
+        admin, id_destino,
         nombre=pedir_opcional_texto("Nuevo nombre: "),
         zona=pedir_opcional_texto("Nueva zona: "),
         descripcion=pedir_opcional_texto("Nueva descripción: "),
@@ -74,40 +83,111 @@ def opcion_modificar(servicio: ServicioDestinos) -> None:
     print("Destino modificado.")
 
 
-def opcion_retirar(servicio: ServicioDestinos) -> None:
+def opcion_retirar(servicio: ServicioDestinos, admin) -> None:
     id_destino = pedir_entero("ID del destino a retirar: ", "El ID")
-    resultado = servicio.retirar(id_destino)
+    resultado = servicio.retirar(admin, id_destino)
     if resultado == ELIMINADO:
         print("El destino no estaba en ningún paquete: fue eliminado.")
     else:
         print("El destino forma parte de paquetes: quedó como NO disponible.")
 
 
-def menu_destinos(servicio: ServicioDestinos) -> None:
+def menu_administrador(admin, destinos: ServicioDestinos) -> None:
     while True:
-        print("\n=== Viajes Aventura · Destinos ===")
+        print(f"\n=== Panel de administración · {admin.nombre} ===")
         print("1. Registrar destino")
         print("2. Listar destinos")
         print("3. Modificar destino")
         print("4. Retirar destino")
+        print("0. Cerrar sesión")
+        opcion = input("Elige una opción: ").strip()
+        try:
+            if opcion == "1":
+                opcion_registrar(destinos, admin)
+            elif opcion == "2":
+                mostrar_destinos(destinos.listar(admin))
+            elif opcion == "3":
+                opcion_modificar(destinos, admin)
+            elif opcion == "4":
+                opcion_retirar(destinos, admin)
+            elif opcion == "0":
+                print("Sesión cerrada.")
+                return
+            else:
+                print("Opción no válida.")
+        except ErrorAgencia as error:
+            print(f"Error: {error}")
+
+
+# -------------------------------------------------------------- panel de cliente
+def menu_cliente(cliente) -> None:
+    while True:
+        print(f"\n=== Bienvenido/a, {cliente.nombre} ===")
+        print("1. Ver mis datos")
+        print("0. Cerrar sesión")
+        opcion = input("Elige una opción: ").strip()
+        if opcion == "1":
+            # Es SU propio perfil, pero igual se muestran enmascarados (R17).
+            print(f"Correo:   {cliente.correo}")
+            print(f"RUT:      {cliente.rut_enmascarado()}")
+            print(f"Teléfono: {cliente.telefono_enmascarado()}")
+        elif opcion == "0":
+            print("Sesión cerrada.")
+            return
+        else:
+            print("Opción no válida.")
+        # (Sprint 2b: aquí irán consultar paquetes, reservar y ver historial.)
+
+
+# ------------------------------------------------------------- menú principal
+def pedir_password_nueva() -> str:
+    clave = getpass("Contraseña: ")
+    repetida = getpass("Repite la contraseña: ")
+    if clave != repetida:
+        raise ErrorValidacion("Las contraseñas no coinciden.")
+    return clave
+
+
+def opcion_registrarse(auth: ServicioAutenticacion) -> None:
+    print("--- Crear cuenta de cliente ---")
+    nombre = input("Nombre completo: ")
+    rut = input("RUT (ej. 12.345.678-5): ")
+    correo = input("Correo electrónico: ")
+    telefono = input("Teléfono: ")
+    password = pedir_password_nueva()
+    auth.registrar_cliente(nombre, rut, correo, telefono, password)
+    print("Cuenta creada. Ahora puedes iniciar sesión.")
+
+
+def opcion_iniciar_sesion(auth: ServicioAutenticacion, destinos: ServicioDestinos) -> None:
+    correo = input("Correo electrónico: ")
+    password = getpass("Contraseña: ")          # getpass no muestra lo que escribes
+    usuario = auth.iniciar_sesion(correo, password)
+    if isinstance(usuario, Administrador):
+        menu_administrador(usuario, destinos)
+    else:
+        menu_cliente(usuario)
+
+
+def menu_principal(auth: ServicioAutenticacion, destinos: ServicioDestinos) -> None:
+    while True:
+        print("\n=== Viajes Aventura ===")
+        print("1. Iniciar sesión")
+        print("2. Registrarse")
         print("0. Salir")
         opcion = input("Elige una opción: ").strip()
         try:
             if opcion == "1":
-                opcion_registrar(servicio)
+                opcion_iniciar_sesion(auth, destinos)
             elif opcion == "2":
-                mostrar_destinos(servicio.listar())
-            elif opcion == "3":
-                opcion_modificar(servicio)
-            elif opcion == "4":
-                opcion_retirar(servicio)
+                opcion_registrarse(auth)
             elif opcion == "0":
                 print("Hasta luego.")
-                break
+                return
             else:
                 print("Opción no válida.")
         except ErrorAgencia as error:
-            # Solo se atrapan errores controlados; el mensaje ya es seguro.
+            # Solo errores controlados: los mensajes ya son seguros (sin RUT ni teléfono).
             print(f"Error: {error}")
 
 
@@ -115,8 +195,10 @@ def main() -> None:
     conexion = obtener_conexion()
     try:
         crear_esquema(conexion)
-        servicio = ServicioDestinos(RepositorioDestinos(conexion))
-        menu_destinos(servicio)
+        cifrador = cargar_cifrador()
+        auth = ServicioAutenticacion(RepositorioUsuarios(conexion, cifrador))
+        destinos = ServicioDestinos(RepositorioDestinos(conexion))
+        menu_principal(auth, destinos)
     finally:
         conexion.close()
 

@@ -17,3 +17,11 @@ class ErrorValidacion(ErrorAgencia):
 
 class ErrorNegocio(ErrorAgencia):
     """Se intentó algo que viola una regla de negocio (R1 a R17)."""
+
+
+class ErrorAutenticacion(ErrorAgencia):
+    """Credenciales inválidas o cuenta temporalmente bloqueada."""
+
+
+class ErrorAutorizacion(ErrorAgencia):
+    """El usuario no tiene permiso para esa acción (RNF04, RN08)."""
