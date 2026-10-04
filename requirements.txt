@@ -2,3 +2,4 @@
 #   pip install -r requirements.txt
 bcrypt>=4.1,<6
 cryptography>=42
+streamlit>=1.40,<2

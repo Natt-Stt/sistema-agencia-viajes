@@ -64,15 +64,19 @@ CREATE TABLE IF NOT EXISTS reservas (
                       CHECK (estado IN ('PENDIENTE', 'CONFIRMADA', 'CANCELADA')),
     id_confirmado_por INTEGER REFERENCES usuarios(id)
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_reserva_activa_cliente_paquete
+ON reservas (id_cliente, id_paquete)
+WHERE estado IN ('PENDIENTE', 'CONFIRMADA');
 """
 
 
-def obtener_conexion(ruta=RUTA_DB_POR_DEFECTO) -> sqlite3.Connection:
-    """Abre (o crea) la base de datos. Usa ':memory:' para pruebas."""
+def obtener_conexion(ruta=RUTA_DB_POR_DEFECTO, *, check_same_thread=True) -> sqlite3.Connection:
+    """Abre la base de datos; permite desactivar la afinidad de hilo para Streamlit."""
     ruta_texto = str(ruta)
     if ruta_texto != ":memory:":
         Path(ruta_texto).parent.mkdir(parents=True, exist_ok=True)
-    conexion = sqlite3.connect(ruta_texto)
+    conexion = sqlite3.connect(ruta_texto, check_same_thread=check_same_thread)
     conexion.row_factory = sqlite3.Row            # permite fila["nombre"]
     # SQLite trae las claves foráneas DESACTIVADAS por defecto: hay que activarlas
     # en cada conexión o los REFERENCES no protegen nada.

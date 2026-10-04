@@ -73,6 +73,16 @@ class RepositorioDestinos:
             ).fetchall()
         return [self._a_destino(fila) for fila in filas]
 
+    def disponibles_por_ids(self, ids_destinos: list[int]) -> list[Destino]:
+        if not ids_destinos:
+            return []
+        marcadores = ",".join("?" for _ in ids_destinos)
+        filas = self._con.execute(
+            f"SELECT * FROM destinos WHERE disponible = 1 AND id IN ({marcadores})",
+            tuple(ids_destinos),
+        ).fetchall()
+        return [self._a_destino(fila) for fila in filas]
+
     def eliminar(self, id_destino: int) -> None:
         try:
             with self._con:
