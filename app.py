@@ -166,7 +166,11 @@ def _iniciar_sesion(servicios):
     with tab_registro:
         with st.form("form_registro", clear_on_submit=False):
             nombre = st.text_input("Nombre completo")
-            rut = st.text_input("RUT", placeholder="12.345.678-5")
+            rut = st.text_input(
+                "RUT",
+                placeholder="12.345.678-5",
+                help="Puedes escribirlo con o sin puntos y guion. El dígito verificador debe ser correcto.",
+            )
             correo_nuevo = st.text_input("Correo electrónico", key="registro_correo", autocomplete="email")
             telefono = st.text_input("Teléfono", placeholder="+56 9 1234 5678")
             clave = st.text_input("Contraseña", type="password", autocomplete="new-password")
@@ -213,6 +217,10 @@ def _pagina_resumen(servicios, usuario):
 
 
 def _pagina_destinos(servicios, usuario):
+    mensaje_destino_creado = st.session_state.pop("mensaje_destino_creado", None)
+    if mensaje_destino_creado:
+        st.success(mensaje_destino_creado)
+
     st.title("Destinos")
     st.dataframe([{
         "ID": destino.id,
@@ -225,7 +233,7 @@ def _pagina_destinos(servicios, usuario):
 
     alta, cambios = st.tabs(["Registrar destino", "Modificar o retirar"])
     with alta:
-        with st.form("crear_destino"):
+        with st.form("crear_destino", clear_on_submit=True):
             columnas = st.columns(2)
             nombre = columnas[0].text_input("Nombre")
             zona = columnas[1].text_input("Zona")
@@ -237,7 +245,7 @@ def _pagina_destinos(servicios, usuario):
         if guardar and _error(lambda: servicios["destinos"].registrar(
             usuario, nombre, zona, int(duracion), int(costo), descripcion
         )):
-            st.success("Destino registrado.")
+            st.session_state["mensaje_destino_creado"] = "Destino registrado correctamente."
             st.rerun()
 
     with cambios:

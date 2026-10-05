@@ -13,8 +13,9 @@ _LETRAS = "A-Za-zÁÉÍÓÚÜÑáéíóúüñ"
 _PATRON_NOMBRE = re.compile(rf"^[{_LETRAS}][{_LETRAS}' .\-]{{1,99}}$")
 _PATRON_CORREO = re.compile(
     r"^[A-Za-z0-9._%+\-]+@[A-Za-z0-9\-]+(\.[A-Za-z0-9\-]+)*\.[A-Za-z]{2,}$")
-_PATRON_RUT = re.compile(r"^(\d{7,8})-?([\dK])$")
+_PATRON_RUT = re.compile(r"^([0-9]{1,8})-?([0-9K])$")
 _PATRON_TELEFONO = re.compile(r"^\+?\d{8,15}$")
+_SEPARADORES_RUT = re.compile(r"[\s.\-\u2010-\u2015\u2212]+")
 
 
 def validar_nombre(valor) -> str:
@@ -49,17 +50,17 @@ def _digito_verificador(cuerpo: str) -> str:
 
 
 def validar_rut(valor) -> str:
-    """Acepta '12.345.678-5', '12345678-5' o '123456785'. Devuelve '12345678-5'."""
+    """Acepta RUT de 1 a 8 cifras antes del DV y normaliza los separadores."""
     if not isinstance(valor, str):
         raise ErrorValidacion("El RUT ingresado no es válido.")
-    limpio = valor.strip().upper().replace(".", "").replace(" ", "")
+    limpio = _SEPARADORES_RUT.sub("", valor.strip()).upper()
     coincidencia = _PATRON_RUT.match(limpio)
     if not coincidencia:
         raise ErrorValidacion("El RUT ingresado no es válido.")
     cuerpo, dv = coincidencia.groups()
     if _digito_verificador(cuerpo) != dv:
         raise ErrorValidacion("El RUT ingresado no es válido.")
-    return f"{cuerpo}-{dv}"
+    return f"{int(cuerpo)}-{dv}"
 
 
 def validar_telefono(valor) -> str:

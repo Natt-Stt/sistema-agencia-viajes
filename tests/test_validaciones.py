@@ -11,6 +11,21 @@ class PruebasValidaciones(unittest.TestCase):
         for entrada in ("12.345.678-5", "12345678-5", "123456785", " 12.345.678-5 "):
             self.assertEqual(v.validar_rut(entrada), "12345678-5")
 
+    def test_rut_con_cuerpo_de_menos_de_siete_cifras_es_valido(self):
+        for entrada, esperado in (("1-9", "1-9"), ("123456-0", "123456-0")):
+            with self.subTest(entrada=entrada):
+                self.assertEqual(v.validar_rut(entrada), esperado)
+
+    def test_rut_con_guion_tipografico_y_espacios_unicode_se_normaliza(self):
+        entradas = (
+            "12.345.678\u20135",
+            "12\u00a0345\u202f678\u00a0-\u00a05",
+            "12.345.678\u22125",
+        )
+        for entrada in entradas:
+            with self.subTest(entrada=entrada):
+                self.assertEqual(v.validar_rut(entrada), "12345678-5")
+
     def test_rut_con_k_valido(self):
         self.assertEqual(v.validar_rut("10.000.013-k"), "10000013-K")
 
@@ -19,7 +34,7 @@ class PruebasValidaciones(unittest.TestCase):
             v.validar_rut("12.345.678-9")
 
     def test_rut_con_formato_invalido_rechazado(self):
-        for entrada in ("", "abc", "1-9", "12345678901-5", None, 12345678):
+        for entrada in ("", "abc", "12345678901-5", None, 12345678):
             with self.assertRaises(ErrorValidacion):
                 v.validar_rut(entrada)
 
