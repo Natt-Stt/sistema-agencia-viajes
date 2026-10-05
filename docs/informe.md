@@ -145,7 +145,7 @@ Implementar una aplicación para administrar destinos y paquetes turísticos, re
 
 
 
-### 3.4 Matriz de trazabilidad (indicador 4.1.2.I.8, vale 10 %)
+### 3.4 Matriz de trazabilidad 
 
 La matriz vincula cada requerimiento funcional con su regla de origen, proceso, clases, módulos y pruebas que verifican el comportamiento implementado.
 
@@ -171,12 +171,12 @@ La matriz vincula cada requerimiento funcional con su regla de origen, proceso, 
 
 ---
 
-## 4. Planificación ágil (criterio 4.1.3)
+## 4. Planificación ágil
 
 ### 4.1 Metodología y justificación
-Se propone Scrum adaptado para organizar un desarrollo breve, con un equipo pequeño (2–3 integrantes, según la pauta) y un plazo de cinco días. Se prioriza un Product Backlog reducido y demostrable: primero persistencia y catálogo; luego autenticación, paquetes y reservas; por último, estados, pruebas e informe. Los sprints de uno o dos días permiten revisar entregables con frecuencia y reordenar tareas ante bloqueos.
+Se prioriza un Product Backlog reducido y demostrable: primero persistencia y catálogo; luego autenticación, paquetes y reservas; por último, estados, pruebas e informe. Los sprints de uno o dos días permiten revisar entregables con frecuencia y reordenar tareas ante bloqueos.
 
-Por el tamaño del equipo, no se requieren roles Scrum separados: las personas pueden compartir responsabilidades y revisar cambios entre sí. Una daily de hasta 10 minutos sirve para comunicar avance, siguiente tarea y bloqueos; cada sprint termina con una revisión funcional breve y una retrospectiva de mejoras. El repositorio permite verificar los módulos y pruebas entregados, pero no conserva actas, fechas reales de reuniones ni asignaciones nominales; por ello, el cronograma y las tareas siguientes son una reconstrucción estimada, no un registro histórico de horas.
+Cada sprint termina con una revisión funcional breve y una retrospectiva de mejoras. El repositorio permite verificar los módulos y pruebas entregados, pero no conserva actas, fechas reales de reuniones ni asignaciones nominales; por ello, el cronograma y las tareas siguientes son una reconstrucción estimada, no un registro histórico de horas.
 
 ### 4.2 Product Backlog
 
@@ -213,13 +213,11 @@ Los puntos son una estimación relativa de complejidad basada en el alcance impl
 - **Sprint 2:** implementar registro, validación y autenticación (4 h, seguridad); integrar bcrypt y cifrado de datos personales (3 h, seguridad); construir paquetes, cálculo y publicación del precio (4 h, dominio/backend); implementar reservas, cupos, historial y transacciones (4 h, backend); probar autorizaciones y reglas críticas (4 h, pruebas).
 - **Sprint 3:** completar confirmación, cancelación y edición de borradores (4 h, backend); ejecutar y corregir pruebas integradas (3 h, pruebas); verificar interfaces e instrucciones de ejecución (2 h, integración); cerrar trazabilidad e informe (3 h, documentación).
 
-Los responsables son roles sugeridos para repartir el trabajo en el equipo; el repositorio no identifica qué integrante ejecutó cada tarea ni acredita estas estimaciones como tiempo efectivamente trabajado.
 
-**Reuniones propuestas:** daily de hasta 10 minutos cada día de trabajo; revisión al cierre de cada sprint con demostración del incremento; retrospectiva breve para acordar una mejora concreta para el siguiente sprint. No hay actas o calendario de reuniones en los archivos revisados.
 
 ---
 
-## 5. Implementación (criterio 4.1.4)
+## 5. Implementación 
 
 ### 5.1 Arquitectura y estructura del proyecto
 ```text
@@ -325,7 +323,7 @@ usuarios (administrador) 1 ─── N reservas.confirmada_por
 | Paquete | Implementado como borrador | Implementado | Implementado solo en borrador | No implementado; se conserva para proteger el historial |
 | Reserva | Implementado como pendiente | Historial del cliente y listado administrador | Confirmar/cancelar mediante transición de estado | Cancelación lógica; no se borra el registro |
 
-### 5.4 Principios de POO aplicados (indicador 4.1.4.G.13)
+### 5.4 Principios de POO aplicados 
 
 | Principio | Dónde se aplica en el código | Por qué |
 |---|---|---|
@@ -348,7 +346,7 @@ La interfaz web se inicia con `streamlit run app.py`. Se requiere Python 3.11 o 
 
 ---
 
-## 6. Seguridad (criterio 4.1.5)
+## 6. Seguridad 
 
 ### 6.1 Autenticación
 Las contraseñas se procesan con `bcrypt` (dependencia PyPI), usando un costo de 12 rondas en ejecución normal y una sal aleatoria nueva incorporada al hash. Durante el registro se exige una contraseña de al menos 8 caracteres, con mayúscula, minúscula y número; se rechazan más de 72 bytes UTF-8, límite de bcrypt. En el inicio de sesión, `bcrypt.checkpw` compara la entrada con el hash guardado sin recuperar la contraseña original. No se usa SHA-256 ni MD5 para contraseñas: son funciones rápidas de propósito general que permiten probar candidatos con mucha rapidez; bcrypt es adaptativo y eleva deliberadamente el costo de cada intento. Las pruebas reducen el costo de bcrypt a 4 para ejecutarse más rápido; esa configuración es exclusiva del entorno de pruebas.
@@ -363,8 +361,8 @@ La contraseña se almacena como hash bcrypt, no en texto claro. RUT y teléfono 
 
 La clave se lee prioritariamente de la variable de entorno `AGENCIA_CLAVE_CIFRADO`; si no está definida, se lee o crea `data/clave.key`, que está excluida por `.gitignore`. No existe un `.env` requerido. La pérdida de esa clave impide recuperar RUT y teléfono cifrados. La base `data/agencia.db` sí está versionada en el repositorio, por lo que no debe contener datos personales reales: debe retirarse del control de versiones o sustituirse por una base de prueba anonimizada antes de distribuir datos de producción.
 
-### 6.4 Evaluación de seguridad con apoyo de IA (indicador 4.1.5.I.20, vale 10 %)
-> Esta matriz contrasta amenazas con el código y las pruebas existentes. Las recomendaciones son una revisión asistida por IA; no se hicieron cambios funcionales durante la preparación de este informe. La comprobación de que `data/agencia.db` está versionada se hizo en el índice Git; no se inspeccionaron sus registros.
+### 6.4 Evaluación de seguridad con apoyo de IA 
+
 
 | Amenaza | Riesgo en este sistema | Recomendación de IA | Mi validación técnica | Mejora aplicada |
 |---|---|---|---|---|
@@ -376,9 +374,8 @@ La clave se lee prioritariamente de la variable de entorno `AGENCIA_CLAVE_CIFRAD
 
 ---
 
-## 7. Uso crítico de herramientas de IA (indicador 4.1.4.I.16, vale 10 %)
+## 7. Uso crítico de herramientas de IA 
 
-La bitácora disponible en el borrador se conserva como antecedente; cuando no hay fecha o integrante verificable, se indica expresamente. La segunda fila registra la asistencia utilizada para completar este informe. Para futuras iteraciones, conviene mantener fecha, prompt, respuesta, validación y decisión al momento de cada uso.
 
 | # | Fecha | Herramienta | Qué pedí | Qué sugirió | Cómo lo validé | Decisión (usado / modificado / descartado) y por qué | Integrante |
 |---|---|---|---|---|---|---|---|
